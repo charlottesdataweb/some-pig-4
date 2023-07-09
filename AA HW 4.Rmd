@@ -1,0 +1,165 @@
+---
+title: "HW 4"
+author: "CJK"
+date: "2023-07-09"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is the markdown file for homework assignment 4 for Advanced Analytics. The focus of this homework is creating comment categories via regular expression Final deliverables will be excel files. 
+
+Here is the prompt for the assignment:
+Using the Honeywell Glassdoor Comments from Class, create at least 20 comment categories.
+These can include subcategories (e.g. Benefits-Healthcare, Benefits-PTO, etc.). Run these over both the Pros and the Cons. You can create 2 different Excel sheets or 1 Excel sheet with one tab for Pros and one tab for Cons.
+
+
+I will start by ensuring I have the appropriate packages downloaded and in my library for regular expressions.
+```{r}
+tryCatch(require(pacman),finally=utils:::install.packages(pkgs='pacman',repos='http://cran.r-project.org'));
+require(pacman)
+
+pacman::p_load(openxlsx, 
+               tidyverse, 
+               devtools,
+               conflicted,
+               lubridate,
+               sentimentr)
+
+#Loading libraries
+library(openxlsx)
+library(tidyverse)
+library(devtools)
+library(conflicted)
+library(lubridate)
+library(sentimentr)
+```
+
+I will also use the conflict_prefer() function to tell R that when I use the filter() function, I want the function from the dplyr package.
+```{r}
+conflict_prefer("filter", "dplyr")
+```
+
+I will now read in the CSV file and give it the initial name of 'Data'. I need to make sure it's reading in from the project that matches my github repository.
+```{r}
+library(readr)
+Data <- read_csv("~/Documents/DirectoryR/UGA IOMP 2023 AA/some-pig-4/glassdoortest1.csv")
+```
+
+My data is 2000 observations of 5 variables.
+Now I will take a look at my column names to get to know my variables better, and I will give an initial view of my data as well.
+```{r}
+colnames(Data)
+View(Data)
+```
+
+The variable titled '...1' appears to be an ID number, so I will change that variable name to ID.
+```{r}
+Data <- Data %>%
+    rename(ID = '...1')
+```
+
+
+I'm now going to create two new dataframes, one for the 'pros' comments and one for the 'cons' comments. I will keep the entire original dataframe intact as it is.
+```{r}
+Comments_df_pros <- Data %>%
+    select(c(ID, pros)) %>%
+    filter(!is.na(pros)) %>%
+    rename('comments' = 'pros')
+
+Comments_df_cons <- Data %>%
+    select(c(ID, cons)) %>%
+    filter(!is.na(cons)) %>%
+    rename('comments' = 'cons')
+```
+
+
+I know from experience in class that a few diamond with a question mark symbols are in several of the comments, and this can cause problems with R correctly reading the text and with R being able to kick anything out to excel later on. I will use the stringi package to make sure this symbol is removed and won't affect my progress later on.
+```{r}
+library(stringi)
+
+Comments_df_pros <- Comments_df_pros %>%
+    as_tibble() %>%
+    mutate(comments = str_replace_all(comments, "\uFFFD",""))
+
+Comments_df_cons <- Comments_df_cons %>%
+    as_tibble() %>%
+    mutate(comments = str_replace_all(comments, "\uFFFD",""))
+
+```
+
+
+And now that I've made the adjustment for that symbol, I can also change comments to be all lowercase. This can help later on so I don't have to worry about any expressions I create being case-sensitive (for instance, I want to build just one expression that can detect benefits, Benefits, and BENEFITS all equally.)
+```{r}
+Comments_df_pros <- Comments_df_pros %>%
+    mutate(comments = tolower(comments))
+
+Comments_df_cons <- Comments_df_cons %>%
+    mutate(comments = tolower(comments))
+```
+
+
+And I can remove all line breaks as well. This will help ensure accurate pattern matching when building out regular expressions.
+```{r}
+Comments_df_pros$comments <- gsub("[\r\n]", "", Comments_df_pros$comments)
+
+Comments_df_pros <- Comments_df_pros %>%
+    select(ID, comments) %>%
+    na.omit()
+
+Comments_df_cons$comments <- gsub("[\r\n]", "", Comments_df_cons$comments)
+
+Comments_df_cons <- Comments_df_cons %>%
+    select(ID, comments) %>%
+    na.omit()
+```
+
+
+And lastly, I know from viewing the data that a few comments are '#name?' - these should be treated as blanks, so I'm going to tell R to treat any comments of #name? as NAs.
+```{r}
+Comments_df_pros[Comments_df_pros == '#name?'] <- NA
+Comments_df_cons[Comments_df_cons == '#name?'] <- NA
+
+```
+
+
+And now I'm going to remove these NA responses from my dataframes. I can just do a listwise deletion since the comments are separated out (so if someone answered the pros but not the cons question, it will retain their comment in one dataframe and remove the NA from the other).
+```{r}
+summary(is.na(Comments_df_pros$comments))
+
+Comments_df_pros <- na.omit(Comments_df_pros)
+
+summary(is.na(Comments_df_cons$comments))
+
+Comments_df_cons <- na.omit(Comments_df_cons)
+
+```
+
+And now I will just double check my work. Both should return with FALSE for all remaining numbers of observations (1968 for pros, 1974 for cons).
+```{r}
+summary(is.na(Comments_df_pros$comments))
+summary(is.na(Comments_df_cons$comments))
+```
+
+That worked, and now my dataframes are all ready for creating regular expressions. Before I do this though, I am going to brainstorm some good categories and subcategories of what to search for. What are some themes and patterns in the data that would capture valuable insights for both the pros and the cons comments?
+
+Potential categories could include:
+- Company culture
+Within company culture, subcategories could be insights into opinions on policies, thoughts on leadership, workplace politics, etc.
+Key words might be (culture, policies, politics, leader(s), leadership, manager(s), management, values, standards, etc.)
+
+- Job enrichment
+Within job enrichment, subcategories could be insights into career advancement opportunities, autonomy (flexible schedule, remote/hybrid work), task clarity/significance (do employees feel recognized and appreciated?), etc.
+Key words might be (flexible/flexibility, promotion, growth, advancement, recognized/recognition, appreciate(d), remote, hybrid, schedule, succession, career planning, etc.)
+
+- Employee health
+Within employee health, subcategories could be insights into work-life balance, employee voice, work safety, etc.
+Key words might be (health(y), unhealthy, stress(ed), burnout, balance, voice, heard, engaged, 'take care', safe(ty), unsafe, working conditions, work environment, etc.)
+
+
+```{r}
+
+```
+
