@@ -146,20 +146,715 @@ summary(is.na(Comments_df_cons$comments))
 That worked, and now my dataframes are all ready for creating regular expressions. Before I do this though, I am going to brainstorm some good categories and subcategories of what to search for. What are some themes and patterns in the data that would capture valuable insights for both the pros and the cons comments?
 
 Potential categories could include:
-- Company culture
-Within company culture, subcategories could be insights into opinions on policies, thoughts on leadership, workplace politics, etc.
-Key words might be (culture, policies, politics, leader(s), leadership, manager(s), management, values, standards, etc.)
+- Company culture (subcategories could pertain to leadership/management, org values, company policies, etc)
+- Employee health (subcategories could relate to stress and burnout, work-life balance, health insurance, etc)
+- Job enrichment (subcategories could deal with autonomy and flexibility at work, recognition at work, and anything to do with career advancement opportunities)
 
-- Job enrichment
-Within job enrichment, subcategories could be insights into career advancement opportunities, autonomy (flexible schedule, remote/hybrid work), task clarity/significance (do employees feel recognized and appreciated?), etc.
-Key words might be (flexible/flexibility, promotion, growth, advancement, recognized/recognition, appreciate(d), remote, hybrid, schedule, succession, career planning, etc.)
+I will further expand these out and brainstorm them, and other ideas, offline and add my full list below when it is complete!
 
-- Employee health
-Within employee health, subcategories could be insights into work-life balance, employee voice, work safety, etc.
-Key words might be (health(y), unhealthy, stress(ed), burnout, balance, voice, heard, engaged, 'take care', safe(ty), unsafe, working conditions, work environment, etc.)
 
+After my brainstorm, here is my final list of four categories with their subcategories. I ultimately decided to make job enrichment and career growth two different categories since career growth had a lot going on once I dug deeper.
+
+Job Enrichment:
+* Remote / Hybrid Options
+* Flexibility of Hours / Schedule
+* Autonomy at Work
+* Recognition at Work
+* Employee Perks & Incentives
+
+Career Growth:
+* Training & Development
+* Career Advancement Opportunities
+* Succession & Career Planning
+* Miscellaneous Growth Opportunities (Conferences, Certifications, etc)
+
+Employee Health:
+* Work-Life Balance
+* Stress & Burnout
+* Work Safety / Environment
+* General Well-Being
+* Job Security
+
+Company Culture:
+* Leadership / Management - General
+* Direct Manager Relationships
+* Organizational Values
+* Dynamics with Co-workers
+* Employee Voice
+* Workplace Policies
+
+
+I will tackle Job Enrichment first. I will comment out within each code chunk to describe what I am hoping to capture with each REGEX pattern I create.
+
+I will also get my reps in with using start_time from the lubridate package to provide start and end times for the different searches.
+```{r}
+start_time <- now()
+```
+
+
+Remote / Hyprid Options
+```{r}
+enrich_remote <- c('(?=.*remote|home|virtual)(?=.*(?:work))', #this will get any comments that have the word remote/remotely, virtual/virtually, and home with any word that has 'work' in it (work, works, worked, worker(s), or working)
+                    '\\btelecommut\\w*\\b', #this will capture telecommute, telecommutes, telecommuted, or telecommuting
+                   '\\b(?:tele\\W+(?:\\w+\\W+){0,1}?commuting)\\b', #this will capture both telecommuting and tele commuting in case anyone made them two separate words instead of one
+                    '\\bhybrid\\b', #this one is simple, it will capture the word hybrid (I'm thinking the only reason the word hybrid would show up is how it relates to remote work options)
+                    '(?=.*remote|home|virtual)(?=.*(?:option|opportunit))' #this one is similar to the first line - it will capture any variant or remote, home or virtual when in the same comment as option(s) or opportunity/opportunities
+
+)
+
+enrich_remote_pattern <- paste(enrich_remote, collapse = "|") #This will combine everything I input for the above subcategory of 'remote work' for job enrichment into one pattern
+
+enrich_remote_cons <- as.data.frame(Comments_df_cons[grep(enrich_remote_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) # This takes the pattern I built out and searches over the comments in the 'cons' column from the dataframe I built 
+
+TESTCONS <- Comments_df_cons %>%
+    mutate(enrich_remote = ifelse(comments %in% enrich_remote_cons$comments, "Y",
+                             "N")) #This creates a new object, TEST, from my cons dataframe and if any of the comments in the "comments" column match (%in%) the comments exactly, they get a "Y". If not they get a "N" in the new "enrich_remote" column
+
+#I will now repeat the last two steps for my pros dataframe as well
+
+enrich_remote_pros <- as.data.frame(Comments_df_pros[grep(enrich_remote_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- Comments_df_pros %>%
+    mutate(enrich_remote = ifelse(comments %in% enrich_remote_pros$comments, "Y",
+                             "N"))
+
+
+```
+
+
+All of that worked! So I now have my first subcategory of Remote/Hybrid Work with 34 pros comments and 70 cons comments. I did view the two dataframes to ensure they are picking up the types of comments I wanted, and they seem to be doing what I would expect them to do. I will now repeat these steps for my other Job Enrichment subcategories.
+
+Flexibility of Hours / Schedule
+```{r}
+enrich_flexible <- c('(?=.*flex?)(?=.*(?:hour|schedul|time|arrang))',
+                     '(?=.*choos?)(?=.*(?:hour|schedul|time|arrang))', #This one should pick up on flex/flexible/flexibility or choose/chooses/choosing combined with either hour/hours or schedule/schedules/scheduled/scheduling or time/times or arrangement/arranging/arrange
+  '\\b(?:set\\W+(?:\\w+\\W+){0,3}?schedule?|hour?)\\b', #This one will capture any comments that say the word 'set', and within three words say schedule(s) or hour(s). So if someone says 'I set my own schedule' or 'I set my hours' it should pick up these, and similar comments.
+  '\\bflexible\\s+work\\s?week\\b' #This will capture either the phrase flexible workweek or flexible work week. 
+
+)
+
+enrich_flexible_pattern <- paste(enrich_flexible, collapse = "|")
+
+enrich_flexible_cons <- as.data.frame(Comments_df_cons[grep(enrich_flexible_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(enrich_flexible = ifelse(comments %in% enrich_flexible_cons$comments, "Y",
+                             "N"))
+
+enrich_flexible_pros <- as.data.frame(Comments_df_pros[grep(enrich_flexible_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(enrich_flexible = ifelse(comments %in% enrich_flexible_pros$comments, "Y",
+                             "N"))
+
+```
+
+Once more, I viewed the dataframes, and the above code seems to have correctly picked up on the patterns of comments dealing with flexible schedules.
+
+
+Autonomy at Work
+```{r}
+enrich_autonomy <- c('^.*autonom.*$','^.*independen.*$','^.*empower.*$',#These three will select comments that mention autonomy/autonomous, independent/independence, freedom, or empower/empowering/empowerment
+                     '\\b(?:control\\W+(?:\\w+\\W+){0,4}work)\\b', #This one will pick up on control and work within four words of each other to select phrases like 'I have control over my work' or 'I don't have control over what I work on'
+                     '\\b(?:micro\\W+(?:\\w+\\W+){0,1}?management|managing|manage|manages|managed)\\b' #I tried to find a good way of doing the 'manag?' to capture all variants of micromanag_____ but I couldn't get it to work as seamlessly as I'd hoped! I'm sure there's a prettier way, but this should take care of all variants and forms of micro-manage, micro manage, or micromanage. (I'd like to know how to combine the concepts of the individual word variant code for autonomy and implement it here, but I couldn't get that to work!)
+    
+)
+
+
+enrich_autonomy_pattern <- paste(enrich_autonomy, collapse = "|")
+
+enrich_autonomy_cons <- as.data.frame(Comments_df_cons[grep(enrich_autonomy_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(enrich_autonomy = ifelse(comments %in% enrich_autonomy_cons$comments, "Y",
+                             "N"))
+
+enrich_autonomy_pros <- as.data.frame(Comments_df_pros[grep(enrich_autonomy_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(enrich_autonomy = ifelse(comments %in% enrich_autonomy_pros$comments, "Y",
+                             "N"))
+```
+
+Once I adjusted the micromanagement code, it seems that the patterns were able to successfully capture Autonomy at Work.
+
+
+Recognition at Work
+```{r}
+enrich_recognition <- c('^.*recogniz.*$', #This one should capture recognize(s/d) or recognizing (at first, I played around with recognition, but several comments mentioned 'brand recognition' or 'name recognition of the company. I played around for a long time trying to figure out a way of doing 'recognition where it doesn't follow the word brand or name' but I was unsuccessful. Below are some of my attempts!)
+# '\\b(?!brand\\s+)recognition\\b'
+# '\\brecognition\\b(?!(?:\\s+(?:brand|name)\\s+recognition))'
+# '\\brecognition\\b(?!\\s+(?:brand\\b|name\\b)\\s+recognition)'
+# '\\brecognition\\b(?!(?:\\s+(?:brand|name)\\b)\\s+recognition)'
+                       '^.*acknowledg.*$', #This should capture the words acknowledge, acknowledgement, acknowledging, etc.
+                    '(?=.*praise|notice|focus|attention|recognition)(?=.*(?:performance|achievement|accomplishment|performing|effort))' #This should capture 'recognition' type words (praise, notice, etc) when the comment also mentions a 'performance' type word (achievement, accomplishment, etc).
+                        
+)
+
+
+
+enrich_recognition_pattern <- paste(enrich_recognition, collapse = "|")
+
+enrich_recognition_cons <- as.data.frame(Comments_df_cons[grep(enrich_recognition_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(enrich_recognition = ifelse(comments %in% enrich_recognition_cons$comments, "Y",
+                             "N"))
+
+enrich_recognition_pros <- as.data.frame(Comments_df_pros[grep(enrich_recognition_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(enrich_recognition = ifelse(comments %in% enrich_recognition_pros$comments, "Y",
+                             "N"))
+```
+
+
+Employee Perks & Incentives
+```{r}
+enrich_perks <- c('^.*perk.*$','^.*incentiv.*$', #These two should pick up on perk(s) and incentive(s) as well as incentivize.
+                  '^.*bonus.*$','^.*reward.*$','^.*gift.*$' #These three should pick up on bonus(es), reward(s) and gift(s) - I structured reward and gift code to avoid other variants of the words like rewarding, gifted, etc.
+#Overall, I kept these codes more simple because, in looking at the data, these word types only seemed to appear in reference to employee perks and weren't used in other instances. 
+                                  
+)
+
+enrich_perks_pattern <- paste(enrich_perks, collapse = "|")
+
+enrich_perks_cons <- as.data.frame(Comments_df_cons[grep(enrich_perks_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(enrich_perks = ifelse(comments %in% enrich_perks_cons$comments, "Y",
+                             "N"))
+
+enrich_perks_pros <- as.data.frame(Comments_df_pros[grep(enrich_perks_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(enrich_perks = ifelse(comments %in% enrich_perks_pros$comments, "Y",
+                             "N"))
+```
+
+
+The Job Enrichment category is complete. I will now move to the Career Growth category.
+
+Training & Development
+```{r}
+career_train <- c('^.*learn.*$','^.*train.*$', #These two codes should capture learn(s), learned, learning, and train(s) trained, training, trainer(s).
+                   #This should capture the word skill(s) being used within three words of either the word gain(s), develop(s) (or variants like developing or development), or the word build(s) (or building).
+                  '\\b(?:skill[s]?\\W+(?:\\w+\\W+){0,3}?(?:develop\\w*|build\\w*|gain\\w*)|(?:develop\\w*|build\\w*|gain\\w*)\\W+(?:\\w+\\W+){0,3}?skill[s]?)\\b',
+                  '\\b(?:talent?\\W+(?:\\w+\\W+){0,3}?(?:develop\\w*|build\\w*|gain\\w*)|(?:develop\\w*|build\\w*|gain\\w*)\\W+(?:\\w+\\W+){0,3}?talent?)\\b',
+                  '\\b(?:knowledge?\\W+(?:\\w+\\W+){0,3}?(?:develop\\w*|build\\w*|gain\\w*)|(?:develop\\w*|build\\w*|gain\\w*)\\W+(?:\\w+\\W+){0,3}?knowledge?)\\b' #The three long codes will, in order, find comments with the word (1) skill(s), or (2) talent (or variants like talented), or (3) knowledge(able) within three words of either develop(s) (or developed/development), build(s), or gain(s)
+    
+)
+
+career_train_pattern <- paste(career_train, collapse = "|")
+
+career_train_cons <- as.data.frame(Comments_df_cons[grep(career_train_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(career_train = ifelse(comments %in% career_train_cons$comments, "Y",
+                             "N"))
+
+career_train_pros <- as.data.frame(Comments_df_pros[grep(career_train_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(career_train = ifelse(comments %in% career_train_pros$comments, "Y",
+                             "N"))
+```
+
+
+Career Advancement Opportunities
+```{r}
+career_advance <- c('\\b(?:career\\s+advancement|advancement\\s+opportunities)\\b', #This should capture either the phrase career advancement or advancement opportunities
+                    '^.*promot.*$', #This should capture any variant of the word promote (promoted, promotes, promotion, promotions, etc)
+                    '\\bupward\\s+mobility\\b', #This should capture the specific phrase 'upward mobility'
+                    '\\bmove\\s+up\\b' #Lastly, this will detect the phrase 'move up' (after examining the comments, this phrase alone, without any other qualifiers, will capture more related comments and not capture false positives - this phrase only seems to be used in relation to career advancement)
+    
+)
+
+career_advance_pattern <- paste(career_advance, collapse = "|")
+
+career_advance_cons <- as.data.frame(Comments_df_cons[grep(career_advance_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(career_advance = ifelse(comments %in% career_advance_cons$comments, "Y",
+                             "N"))
+
+career_advance_pros <- as.data.frame(Comments_df_pros[grep(career_advance_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(career_advance = ifelse(comments %in% career_advance_pros$comments, "Y",
+                             "N"))
+```
+
+
+Succession & Career Planning
+```{r}
+career_plan <- c('^.*succession.*$', #This one detects the word succession
+                 '\\bcareer\\s+plan\\w*\\b', #This will detect career followed by plan, plans, or planning
+                 '\\bcareer\\s+develop\\w*\\b', #Similar to the above, this picks up on career followed by developing, development, develop.
+                 '\\badvancement\\s+plan\\w*\\b' #This one detects the phrase advancement plan(s)/planning
+    
+)
+
+career_plan_pattern <- paste(career_plan, collapse = "|")
+
+career_plan_cons <- as.data.frame(Comments_df_cons[grep(career_plan_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(career_plan = ifelse(comments %in% career_plan_cons$comments, "Y",
+                             "N"))
+
+career_plan_pros <- as.data.frame(Comments_df_pros[grep(career_plan_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(career_plan = ifelse(comments %in% career_plan_pros$comments, "Y",
+                             "N"))
+```
+
+
+Miscellaneous Growth Opportunities (Extras)
+```{r}
+career_extra <- c('^.*certification.*$','^.*conference.*$', #First code will detect the word certification(s), second code will detect the word conference
+                  '\\b(?:tuition|education|college)\\W+(?:\\w+\\W+){0,3}?(?:reimbursement|stipend|reimbursements|stipends)\\b|\\b(?:reimbursement|stipend|reimbursements|stipends)\\W+(?:\\w+\\W+){0,3}?(?:tuition|education|college)\\b', #This will detect either tuition, education, or college within 3 words (before or after) the word reimbursement(s) or stipends(s)
+                  '\\bcontinuing\\s+education\\b' #This will detect the phrase 'continuing education'
+    
+)
+
+career_extra_pattern <- paste(career_extra, collapse = "|")
+
+career_extra_cons <- as.data.frame(Comments_df_cons[grep(career_extra_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(career_extra = ifelse(comments %in% career_extra_cons$comments, "Y",
+                             "N"))
+
+career_extra_pros <- as.data.frame(Comments_df_pros[grep(career_extra_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(career_extra = ifelse(comments %in% career_extra_pros$comments, "Y",
+                             "N"))
+```
+
+The second category, Career Advancement, is complete. I will now move to Employee Health.
+
+
+Work-Life Balance
+```{r}
+health_wlbal <- c('\\bwork[-\\s]?life[-\\s]?balance\\b', #This will pick up on the phrase work life balance and allow for optional hyphens
+                  '\\btime\\s+off\\b', #This will find the phrase time off
+                  '\\bsocial\\s+life\\b', #This will find the phrase social life
+                  '\\b(?:work\\W+(?:\\w+\\W+){0,3}life)\\b',
+                  '\\b(?:life\\W+(?:\\w+\\W+){0,3}work)\\b', #These will find the word work within 3 words of the word life (taking either order into account)
+                  '\\b(?:balance\\W+(?:\\w+\\W+){0,3}work)\\b',
+                  '\\b(?:work\\W+(?:\\w+\\W+){0,3}balance)\\b' #And similarly, these will find the word balance within 3 words of the word work (taking either order into account)
+
+)
+
+
+health_wlbal_pattern <- paste(health_wlbal, collapse = "|")
+
+health_wlbal_cons <- as.data.frame(Comments_df_cons[grep(health_wlbal_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(health_wlbal = ifelse(comments %in% health_wlbal_cons$comments, "Y",
+                             "N"))
+
+health_wlbal_pros <- as.data.frame(Comments_df_pros[grep(health_wlbal_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(health_wlbal = ifelse(comments %in% health_wlbal_pros$comments, "Y",
+                             "N"))
+```
+
+
+Stress & Burnout
+```{r}
+health_stress <- c('^.*stress.*$', #This will detect stress, stressed, stressful, stressor(s), etc
+                   '\\bburnout\\b', '\\bburn[-\\s]?out\\b', #The first code detects the word burnout, the second detects both burn-out and burn out
+                   '\\bexhaust\\w*\\b', '\\boverwork\\w*\\b', #The first code detects exhausted, exhausts, exhausting, etc. The second detects overworks, overworked, overworking, etc.
+                   '\\bwork\\s?load\\b', #This detects the word workload or work load
+                   '^.*overtime.*$' #This detects the word overtime
+                   
+)
+
+health_stress_pattern <- paste(health_stress, collapse = "|")
+
+health_stress_cons <- as.data.frame(Comments_df_cons[grep(health_stress_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(health_stress = ifelse(comments %in% health_stress_cons$comments, "Y",
+                             "N"))
+
+health_stress_pros <- as.data.frame(Comments_df_pros[grep(health_stress_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(health_stress = ifelse(comments %in% health_stress_pros$comments, "Y",
+                             "N"))
+```
+
+
+Work Safety
+```{r}
+health_safety <- c('\\bwork\\w*\\s+safety\\b', #This will detect the phrase work safety, or workplace safety as well
+                   '\\bsafety\\s+training[s]?\\b', #This will detect the phrase safety training
+                   '\\brisk\\s+assessment[s]?\\b', #This will detect the phrase risk assessment(s)
+                   '\\bsafety\\s+risk[s]?\\b', #This will detect the phrase safety risk(s)
+                   '\\binjur\\w*\\b', #This will detect the word injury or injuries
+                   '^.*safe.*$' #This will detect safe, unsafe, safety, etc. I employed this code when the above patterns returned with very little. I did vet the output and didn't see anything out of place when employing this code (so no one talking about 'playing it safe' with a business decision or something else not related to actual work safety).
+
+)
+
+
+health_safety_pattern <- paste(health_safety, collapse = "|")
+
+health_safety_cons <- as.data.frame(Comments_df_cons[grep(health_safety_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(health_safety = ifelse(comments %in% health_safety_cons$comments, "Y",
+                             "N"))
+
+health_safety_pros <- as.data.frame(Comments_df_pros[grep(health_safety_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(health_safety = ifelse(comments %in% health_safety_pros$comments, "Y",
+                             "N"))
+```
+
+
+General Wellbeing
+```{r}
+health_wellbeing <- c('\\bwellbeing\\b', '\\bwell[-\\s]?being\\b', #These two codes will detect either wellbeing, well-being, or well being
+                      '\\bmental[-\\s]?health\\b', #This will detect mental-health or mental health
+                      '\\bphysical[-\\s]?health\\b', #This will detect physical-health or physical health
+                      '\\bwellness[-\\s]?programs?\\b', #This wil detect the phrase wellness program(s)
+                      '\\bhealthcare\\b', '\\bhealth[-\\s]?care\\b', #This will find healthcare, health care, or health-care
+                      '\\bhealth\\s+insurance\\b',
+                      '\\bmedical\\s+insurance\\b', #These two codes will detect the phrases health insurance and medical insurance
+                      '^.*health.*$' #I opted to just use the detection for any use of health. After I used this, I evaluated the results to check for false positives and didn't see anything out of place (ie nothing about the health of the business, etc)
+    
+)
+
+health_wellbeing_pattern <- paste(health_wellbeing, collapse = "|")
+
+health_wellbeing_cons <- as.data.frame(Comments_df_cons[grep(health_wellbeing_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(health_wellbeing = ifelse(comments %in% health_wellbeing_cons$comments, "Y",
+                             "N"))
+
+health_wellbeing_pros <- as.data.frame(Comments_df_pros[grep(health_wellbeing_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(health_wellbeing = ifelse(comments %in% health_wellbeing_pros$comments, "Y",
+                             "N"))
+```
+
+
+Job Security
+```{r}
+health_security <- c('\\bjob\\s+(security|stability)\\b', #This will detect the phrase job security or job stability
+                     '^.*layoff.*$', #This will detect the word layoff(s)
+                     '^.*furlough.*$', #This will detect the word furlough(s)
+                     '\\blay[-\\s]?off[s]?\\b', #This will detect lay off or lay-off (and plural of both)
+                     '\\beconomic\\s+downturn\\b', #This will detect the phrase economic downturn
+                     '\\bjob\\s+(insecurity|instability)\\b', #This will detect job insecurity or job instability
+                     '^.*restructur.*$', #This will detect the words restructure(s/d) or restructuring
+                     '^.*outsourc.*$' #This will detect the words outsource(s/d) or outsourcing
+        
+    
+)
+
+health_security_pattern <- paste(health_security, collapse = "|")
+
+health_security_cons <- as.data.frame(Comments_df_cons[grep(health_security_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(health_security = ifelse(comments %in% health_security_cons$comments, "Y",
+                             "N"))
+
+health_security_pros <- as.data.frame(Comments_df_pros[grep(health_security_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(health_security = ifelse(comments %in% health_security_pros$comments, "Y",
+                             "N"))
+```
+
+
+I now have my last category, Company Culture, to complete, and I am done!
+
+Leadership / Management - General
+```{r}
+culture_lead <- c('^.*leader.*$', #This should capture leader(s), leadership
+                  '^.*management.*$', #This should capture the word management (I want to get more specific with 'manager' in the next subcategory so I won't include that yet)
+                  '^.*executive*$' #This should capture executive(s)
+                  
+    
+)
+
+culture_lead_pattern <- paste(culture_lead, collapse = "|")
+
+culture_lead_cons <- as.data.frame(Comments_df_cons[grep(culture_lead_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(culture_lead = ifelse(comments %in% culture_lead_cons$comments, "Y",
+                             "N"))
+
+culture_lead_pros <- as.data.frame(Comments_df_pros[grep(culture_lead_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(culture_lead = ifelse(comments %in% culture_lead_pros$comments, "Y",
+                             "N"))
+```
+
+
+Direct Manager Relationships
+```{r}
+culture_mngr <- c('^.*manager.*$', #This should capture manager(s) (I specifically made this mutually exclusive from the previous subcategory)
+                  '^.*supervisor.*$' #This should capture supervisor(s)
+                  
+)
+
+culture_mngr_pattern <- paste(culture_mngr, collapse = "|")
+
+culture_mngr_cons <- as.data.frame(Comments_df_cons[grep(culture_mngr_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(culture_mngr = ifelse(comments %in% culture_mngr_cons$comments, "Y",
+                             "N"))
+
+culture_mngr_pros <- as.data.frame(Comments_df_pros[grep(culture_mngr_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(culture_mngr = ifelse(comments %in% culture_mngr_pros$comments, "Y",
+                             "N"))
+```
+
+
+Organizational Values
+```{r}
+culture_value <- c('^.*value.*$', #Will detect the word value(s/d) 
+                   '\\bmission\\b', #Will detect the word mission (set up strict word boundaries to not also capture words like 'commission')
+                   '^.*standard*$', #Will detect the word standard(s)
+                   '^.*ethics.*$', #Will detect the word ethics
+                   '^.*culture.*$', #Will detect the word culture
+                   '^.*integrity.*$' #Will detect the word integrity
+    
+)
+
+culture_value_pattern <- paste(culture_value, collapse = "|")
+
+culture_value_cons <- as.data.frame(Comments_df_cons[grep(culture_value_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(culture_value = ifelse(comments %in% culture_value_cons$comments, "Y",
+                             "N"))
+
+culture_value_pros <- as.data.frame(Comments_df_pros[grep(culture_value_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(culture_value = ifelse(comments %in% culture_value_pros$comments, "Y",
+                             "N"))
+```
+
+
+Dynamics with Co-workers
+```{r}
+culture_cowork <- c('\\bcoworker\\w*\\b', '\\bco[-\\s]?worker\\w*\\b', #Will detect coworker(s), co worker(s), or co-worker(s)
+                    '\\bteamwork\\w*\\b', '\\bteam[-\\s]?work\\w*\\b', #Will detect teamwork, team work, or team-work
+                    '\\bteammate\\w*\\b', '\\bteam[-\\s]?mate\\w*\\b', #Will detect teammate, team mate, or team-mate
+                   '^.*camaraderie.*$', #Will detect the word camaraderie
+                   '^.*relationship.*$' #Will detect the word relationship(s)
+    
+)
+
+culture_cowork_pattern <- paste(culture_cowork, collapse = "|")
+
+culture_cowork_cons <- as.data.frame(Comments_df_cons[grep(culture_cowork_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(culture_cowork = ifelse(comments %in% culture_cowork_cons$comments, "Y",
+                             "N"))
+
+culture_cowork_pros <- as.data.frame(Comments_df_pros[grep(culture_cowork_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(culture_cowork = ifelse(comments %in% culture_cowork_pros$comments, "Y",
+                             "N"))
+```
+
+
+Employee Voice
+```{r}
+culture_voice <- c('^.*voice.*$', #Will detect the word voice
+                   '^.*input.*$', #Will detect the word input
+                   '^.*participat.*$', #Will detect participating, participation, participate(s/d)
+                   '^.*involvement.*$', #Will detect involvement
+                   '^.*opinion.*$', #Will detect opinion(s)
+                   '^.*listen.*$' #Will detect listens, listened, listening
+                   
+)
+
+culture_voice_pattern <- paste(culture_voice, collapse = "|")
+
+culture_voice_cons <- as.data.frame(Comments_df_cons[grep(culture_voice_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(culture_voice = ifelse(comments %in% culture_voice_cons$comments, "Y",
+                             "N"))
+
+culture_voice_pros <- as.data.frame(Comments_df_pros[grep(culture_voice_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(culture_voice = ifelse(comments %in% culture_voice_pros$comments, "Y",
+                             "N"))
+```
+
+
+Workplace Policies
+```{r}
+culture_policy <- c('^.*polic*$', #Will detect policy/policies
+                    '^.*bureaucra*$', #Will detect bureaucracy/bureaucratic
+                    '^.*politic*$', #Will detect politics/political
+                    '^.*procedur*$', #Will detect procedure(s), procedural
+                    '^.*rule.*$', #Will detect rule(s)
+                    '^.*regulation.*$', #Will detect regulation(s)
+                    '\\bred\\s+tape\\b',
+                    '^.*decision.*$' #Will detect decision(s)
+                    
+)
+
+culture_policy_pattern <- paste(culture_policy, collapse = "|")
+
+culture_policy_cons <- as.data.frame(Comments_df_cons[grep(culture_policy_pattern, Comments_df_cons$comments, value = FALSE, perl = TRUE),]) 
+
+TESTCONS <- TESTCONS %>%
+    mutate(culture_policy = ifelse(comments %in% culture_policy_cons$comments, "Y",
+                             "N"))
+
+culture_policy_pros <- as.data.frame(Comments_df_pros[grep(culture_policy_pattern, Comments_df_pros$comments, value = FALSE, perl = TRUE),]) 
+
+TESTPROS <- TESTPROS %>%
+    mutate(culture_policy = ifelse(comments %in% culture_policy_pros$comments, "Y",
+                             "N"))
+```
+
+
+All regex patterns have been created for each subcategory. I will now add an 'other' category to both my pros and cons lists, and I will end the lubridate start time.
+```{r}
+TESTCONS <- TESTCONS %>%
+    mutate(Other = apply(TESTCONS, 1, function(y){ ifelse("Y" %in% y, "N", "Y")}))
+
+TESTPROS <- TESTPROS %>%
+    mutate(Other = apply(TESTPROS, 1, function(y){ ifelse("Y" %in% y, "N", "Y")}))
+
+```
 
 ```{r}
+end_time <- now()
 
+print(difftime(end_time, start_time))
+```
+
+And last but certainly not least, I will create my fancy excel sheets, one for the cons and one for the pros. I have left the comments as is from Rob Stilson (stealing like an artist, but giving credit!) to remind me what each line of code does. Also note that I will copy and paste both the code and the comments to repeat the process for the pros after creating the worksheet for the cons (so the comments will be identical for both, but that's easier than removing them all from the second chunk).
+```{r}
+INTRO <- c("Honeywell Comments",
+
+         "Data Source: Glassdoor",
+
+         "Data As Of: Q3 2020",
+
+         "Prepared on: 7/12/2023",
+
+         "Prepared by: Charlotte Kilbourn")
+
+wb <- openxlsx::createWorkbook() #Create a work book
+
+
+#Comment Report
+
+addWorksheet(wb, "Comment Report Cons") #name the worksheet in Excel
+
+writeData(wb, "Comment Report Cons", INTRO) #Write your INTRO
+
+
+#Create style
+
+style1 <- createStyle(fontColour = "#327471", textDecoration = "Bold") #Choose your custom font color (https://www.rgbtohex.net/) and make it bold. Call it style1
+
+ 
+
+addStyle(wb, style = style1, rows= 1:5, cols = 1, sheet = "Comment Report Cons") #add this style to your worksheet. Tell it which rows and columns
+
+writeData(wb, "Comment Report Cons", TESTCONS, startRow = 8) #put your DF (in this case TEST) into the sheet under your writing (row 8)
+
+hs1 <- createStyle(textDecoration = "Bold") #create a new style for heading
+
+addStyle(wb, style = hs1, rows = 8, cols = 1:50, sheet = "Comment Report Cons") #Tell it where to go. We'll do 50 columns in this case so it can grow if needed
+
+#Freeze Panes
+
+#Also check here: https://stackoverflow.com/questions/37677326/applying-style-to-all-sheets-of-a-workbook-using-openxlsx-package-in-r
+
+freezePane(wb, "Comment Report Cons", firstActiveRow = 9) #Freeze those panes. You know you want to. Tell it where to start.
+
+#Add filter
+
+addFilter(wb, "Comment Report Cons", row = 8, cols = 1:50) #Add your filter as well. If you're trying to impress, you might as well go all in :)
+
+#Now we'll do a fancy save by customizing the file name using paste0 and system time. We'll also assume this was for the previous month. You'll also need to make this path the one you want on your computer. 
+
+
+saveWorkbook(wb, paste0("~/Documents/DirectoryR/UGA IOMP 2023 AA//some-pig-4/Comment ReportCons", format(floor_date(Sys.Date()-months(1), "month"), "%B_%Y") , ".xlsx"), overwrite = TRUE)
+
+```
+
+```{r}
+INTRO <- c("Honeywell Comments",
+
+         "Data Source: Glassdoor",
+
+         "Data As Of: Q3 2020",
+
+         "Prepared on: 7/12/2023",
+
+         "Prepared by: Charlotte Kilbourn")
+
+wb <- openxlsx::createWorkbook() #Create a work book
+
+
+#Comment Report
+
+addWorksheet(wb, "Comment Report Pros") #name the worksheet in Excel
+
+writeData(wb, "Comment Report Pros", INTRO) #Write your INTRO
+
+
+#Create style
+
+style1 <- createStyle(fontColour = "#327471", textDecoration = "Bold") #Choose your custom font color (https://www.rgbtohex.net/) and make it bold. Call it style1
+
+ 
+
+addStyle(wb, style = style1, rows= 1:5, cols = 1, sheet = "Comment Report Pros") #add this style to your worksheet. Tell it which rows and columns
+
+writeData(wb, "Comment Report Pros", TESTPROS, startRow = 8) #put your DF (in this case TEST) into the sheet under your writing (row 8)
+
+hs1 <- createStyle(textDecoration = "Bold") #create a new style for heading
+
+addStyle(wb, style = hs1, rows = 8, cols = 1:50, sheet = "Comment Report Pros") #Tell it where to go. We'll do 50 columns in this case so it can grow if needed
+
+#Freeze Panes
+
+#Also check here: https://stackoverflow.com/questions/37677326/applying-style-to-all-sheets-of-a-workbook-using-openxlsx-package-in-r
+
+freezePane(wb, "Comment Report Pros", firstActiveRow = 9) #Freeze those panes. You know you want to. Tell it where to start.
+
+#Add filter
+
+addFilter(wb, "Comment Report Pros", row = 8, cols = 1:50) #Add your filter as well. If you're trying to impress, you might as well go all in :)
+
+#Now we'll do a fancy save by customizing the file name using paste0 and system time. We'll also assume this was for the previous month. You'll also need to make this path the one you want on your computer. 
+
+
+saveWorkbook(wb, paste0("~/Documents/DirectoryR/UGA IOMP 2023 AA//some-pig-4/Comment ReportPros", format(floor_date(Sys.Date()-months(1), "month"), "%B_%Y") , ".xlsx"), overwrite = TRUE)
 ```
 
